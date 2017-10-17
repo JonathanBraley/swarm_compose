@@ -1,0 +1,35 @@
+version: "3"
+
+services:
+
+  traefik:
+    image: traefik
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /opt/swarm/traefik/traefik.toml:/etc/traefik/traefik.toml
+      - /opt/swarm/logs/traefik/traefik.log:/var/log/traefik.log 
+      - /opt/swarm/traefik/certs:/certs
+    networks:
+      - traefik-net
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    deploy:
+      #The global mode will allow the creation of the container on each node (manager with the constraint)
+      mode: global
+      placement:
+        #We only want the traefik to run on manager nodes.
+        constraints: [node.role == manager]
+    #The command line launch the docker services.
+    command: --docker --docker.swarmmode --docker.domain=FQDN --docker.watch --web
+    environment:
+      - CLOUDFLARE_EMAIL=mail
+      - CLOUDFLARE_API_KEY=apikey
+
+#The external network is an obligration for allowing connexion from other stack or service that are out of the stack.
+networks:
+    traefik-net:
+      external:
+        name: traefik-net
+      driver: overlay

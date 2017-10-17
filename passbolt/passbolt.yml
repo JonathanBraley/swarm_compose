@@ -1,0 +1,67 @@
+version : "3"
+
+services:
+
+#Database container for passbolt
+  passbolt-db:
+    image: mysql
+    volumes:
+      - /opt/swarm/passbolt/mysql:/var/lib/mysql
+    networks:
+      - passbolt-intra
+    environment:
+      - MYSQL_ROOT_PASSWORD=password
+      - MYSQL_DATABASE=database
+      - MYSQL_USER=account
+      - MYSQL_PASSWORD=password
+
+#passbolt container configuration.
+#Before installing the passbolt please install rng-tools and do: "modprod tpm-rng" and "echo tpm-rng >> /etc/modules"
+  passbolt:
+    image: passbolt/passbolt
+#    volumes:
+#      - /opt/swarm/passbolt/images:/var/www/passbolt/app/webroot/img/public
+#      - /opt/swarm/passbolt/config:/var/www/passbolt/app/Config
+    networks:
+      - traefik-net
+      - passbolt-intra
+    depends_on:
+      - passbolt-db
+    deploy:
+      labels:
+        - traefik.enable=true
+        - traefik.backend=passbolt_passbolt
+        - traefik.frontend.rule=Host:FQDN
+        - traefik.docker.network=traefik-net
+        - traefik.port=80
+    environment:
+#      - REGISTRATION=true
+      - EMAIL_TRANSPORT=Smtp
+      - EMAIL_FROM=MAIL
+      - EMAIL_HOST=mail.gandi.net
+      - EMAIL_POST=587
+#      - EMAIL_TIMEOUT=30
+      - EMAIL_USERNAME=mail
+      - EMAIL_PASSWORD=password
+      - EMAIL_TLS=false
+      - SSL=false
+      - KEY_LENGHT=4096
+      - SUBKEY_LENGHT=4096
+      - KEY_NAME=account
+      - KEY_EMAIL=MAIL
+      - KEY_EXPIRATION=0
+      - DB_HOST=passbolt_passbolt-db
+      - DB_USER=account
+      - DB_PASS=password
+      - DB_NAME=database
+      - URL=url
+#Cakephp secrets
+      - CIPHERSEED=generate
+      - SALT=generate
+
+networks:
+    traefik-net:
+      external:
+        name: traefik-net
+      driver: overlay
+    passbolt-intra:

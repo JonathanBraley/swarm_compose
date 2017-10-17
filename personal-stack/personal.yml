@@ -1,0 +1,45 @@
+version: "3"
+
+services:
+
+#Container temporaire sur l'url de base.
+  nginx0:
+    image: nginx
+    networks:
+      - traefik-net
+    deploy:
+      labels:
+        - traefik.frontend.rule=Host:FQDN,FQDN
+        - traefik.port=80
+
+#SMTP relay container.
+  smtp-relay:
+    image: namshi/smtp
+    networks:
+      - smtp-relay-net
+    ports:
+      - "587:587"
+    deploy:
+      mode: global
+      placement:
+        constraints: [node.role == manager]
+    environment:
+      - SMARTHOST_ADRESS=mail.gandi.net
+      - SMARTHOST_PORT=587
+      - SMARTHOST_USER=mail
+      - SMARTHOST_PASSWORD=password
+#      - RELAY_MYDOMAIN=FQDN
+#      - RELAY_HOST=mail.gandi.net:587
+#      - RELAY_LOGIN=mail
+#      - RELAY_PASSWORD=password
+
+#The external network is an obligration for allowing connexion from other stack or service that are out of the stack.
+networks:
+    traefik-net:
+      external:
+        name: traefik-net
+      driver: overlay
+    smtp-relay-net:
+      external:
+        name: smtp-relay-net
+      driver: overlay

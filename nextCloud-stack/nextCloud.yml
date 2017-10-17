@@ -1,0 +1,64 @@
+version: "3"
+
+services:
+
+#nextCloud database container:
+  nextCloud-db:
+    image: mariadb 
+    volumes:
+      - /opt/swarm/nextCloud/mysql:/var/lib/mysql
+    networks:
+      - nextCloud-intra
+    environment:
+      - MYSQL_ROOT_PASSWORD=password
+      - MYSQL_DATABASE=database
+      - MYSQL_USER=account
+      - MYSQL_PASSWORD=password
+
+#nextcloud redis container:
+  nextCloud-redis:
+    image: redis
+    volumes:
+      - /opt/swarm/nextCloud/redis:/data
+    networks:
+      - nextCloud-intra
+
+#nextcloud container:
+  nextCloud:
+    image: wonderfall/nextcloud
+    volumes:
+      - /opt/swarm/nextCloud/session:/php/session
+      - /opt/swarm/nextCloud/data:/data
+      - /opt/swarm/nextCloud/config:/config
+      - /opt/swarm/nextCloud/apps2:/apps2
+      - /opt/swarm/nextCloud/themes:/nextcloud/themes
+      - /opt/swarm/logs/nextCloud:/nginx/logs
+    networks:
+      - nextCloud-intra
+      - traefik-net
+    depends_on:
+      - nextCloud-db
+      - nextCloud-redis
+    deploy:
+      labels:
+        - traefik.enable=true
+        - traefik.backend=cloud_nextCloud
+        - traefik.frontend.rule=Host:FQDN
+        - traefik.docker.network=traefik-net
+        - traefik.port=8888
+    environment:
+      - ADMIN_USER=account
+      - ADMIN_PASSWORD=password
+      - DOMAIN=FQDN
+      - DB_TYPE=mysql
+      - DB_NAME=database
+      - DB_USER=account
+      - DB_PASSWORD=password
+      - DB_HOST=cloud_nextCloud-db 
+
+networks:
+    traefik-net:
+      external:
+        name: traefik-net
+      driver: overlay
+    nextCloud-intra:
